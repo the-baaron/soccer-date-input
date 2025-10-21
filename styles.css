@@ -1,0 +1,107 @@
+body {
+  margin: 0;
+  font-family: sans-serif;
+  background: #111;
+  color: #fff;
+}
+
+#pitch {
+  position: relative;
+  width: 800px;
+  height: 500px;
+  background: #2e7d32;
+  margin: 20px auto;
+  border: 10px solid #fff;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.player {
+  position: absolute;
+  width: 60px;
+  height: 80px;
+  transform: translate(-50%, -50%);
+}
+
+.player .body {
+  position: absolute;
+  bottom: 0;
+  width: 60px;
+  height: 50px;
+  background: #1976d2;
+  border-radius: 50% / 30%;
+}
+
+.player .head {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 30px;
+  height: 30px;
+  background: #64b5f6;
+  border-radius: 50%;
+  transform: translateX(-50%);
+}
+
+.ball {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: white;
+}
+
+.number {
+  position: absolute;
+  color: white;
+  font-size: 24px;
+  font-weight: bold;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+#scoreboard {
+  text-align: center;
+  font-size: 32px;
+  margin-top: 10px;
+}
+
+#overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+#overlay-content {
+  text-align: center;
+}
+
+#overlay h1 {
+  font-size: 48px;
+  margin-bottom: 20px;
+}
+
+#overlay button {
+  background: #ff5252;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  color: white;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+#overlay p {
+  margin-top: 12px;
+  font-size: 18px;
+  color: #ccc;
+  cursor: pointer;
+}
+
+#overlay p:hover {
+  text-decoration: underline;
+}
