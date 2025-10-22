@@ -25,6 +25,7 @@
           <select id="difficultySelect">
             <option value="easy">Solo</option>
             <option value="normal">1 vs 1</option>
+            <option value="team">2 vs 2</option>
           </select>
         </div>
         <div class="form-group">
@@ -57,7 +58,9 @@
       </div>
       <div class="pitch" id="pitch">
         <div class="player" id="player"></div>
+        <div class="player teammate-player" id="teammatePlayer"></div>
         <div class="player ai-player" id="aiPlayer"></div>
+        <div class="player ai-player" id="aiPlayer2"></div>
         <div class="ball" id="ball">
           <div class="ball-gradient"></div>
         </div>
@@ -65,8 +68,12 @@
     </div>
     <div class="overlay hidden" id="overlay">
       <div class="overlay-content">
+        <h2 id="overlayTitle"></h2>
         <div id="overlayMessage"></div>
-        <button id="overlayButton">Play Again</button>
+        <div id="overlayButtons">
+          <button id="changeDateButton" class="overlay-btn">Change Date</button>
+          <button id="selectDateButton" class="overlay-btn hidden">Select This Date</button>
+        </div>
       </div>
     </div>
     <script src="script.js"></script>

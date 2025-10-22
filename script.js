@@ -7,17 +7,23 @@ const submitBtn = document.getElementById("submitBtn");
 const gameOnTitle = document.getElementById("gameOnTitle");
 const pitch = document.getElementById("pitch");
 const player = document.getElementById("player");
+const teammatePlayer = document.getElementById("teammatePlayer");
 const aiPlayer = document.getElementById("aiPlayer");
+const aiPlayer2 = document.getElementById("aiPlayer2");
 const ball = document.getElementById("ball");
 const playerNameDisplay = document.getElementById("playerNameDisplay");
 const dateValueDisplay = document.getElementById("dateValue");
 const aiDateValueDisplay = document.getElementById("aiDateValue");
 const overlay = document.getElementById("overlay");
+const overlayTitle = document.getElementById("overlayTitle");
 const overlayMessage = document.getElementById("overlayMessage");
-const overlayButton = document.getElementById("overlayButton");
+const changeDateButton = document.getElementById("changeDateButton");
+const selectDateButton = document.getElementById("selectDateButton");
 
 let gameActive = false;
 let easyMode = false;
+let teamMode = false;
+let selectedDate = "";
 
 const PITCH_WIDTH = 800;
 const PITCH_HEIGHT = 500;
@@ -30,16 +36,164 @@ const KICK_FORCE = 10;
 const FRICTION = 0.98;
 const WALL_BOUNCE = 0.7;
 
+class AIPlayer {
+  constructor(element, startX, startY, team) {
+    this.element = element;
+    this.x = startX;
+    this.y = startY;
+    this.vx = 0;
+    this.vy = 0;
+    this.angle = 0;
+    this.mode = "wander";
+    this.modeTimer = 0;
+    this.wanderDx = 0;
+    this.wanderDy = 0;
+    this.team = team;
+    this.initialX = startX;
+    this.initialY = startY;
+  }
+
+  reset() {
+    this.x = this.initialX;
+    this.y = this.initialY;
+    this.vx = 0;
+    this.vy = 0;
+    this.angle = 0;
+    this.mode = "wander";
+    this.modeTimer = 0;
+    this.wanderDx = 0;
+    this.wanderDy = 0;
+  }
+
+  update() {
+    if (!playerHasMoved) return;
+
+    const acceleration = 0.25;
+    const maxSpeed = 3.5;
+    const friction = 0.88;
+
+    this.modeTimer++;
+    const timeLimit = this.mode === "wander" ? 90 : 180;
+
+    if (this.modeTimer > timeLimit) {
+      this.modeTimer = 0;
+      if (this.mode === "wander") {
+        this.mode = "chase";
+      } else {
+        this.mode = "wander";
+        this.wanderDx = (Math.random() - 0.5) * 2;
+        this.wanderDy = (Math.random() - 0.5) * 2;
+      }
+    }
+
+    let dx = 0;
+    let dy = 0;
+
+    if (this.mode === "chase") {
+      const ballCenterX = ballX + BALL_SIZE / 2;
+      const ballCenterY = ballY + BALL_SIZE / 2;
+      const aiCenterX = this.x + PLAYER_WIDTH / 2;
+      const aiCenterY = this.y + PLAYER_HEIGHT / 2;
+
+      dx = ballCenterX - aiCenterX;
+      dy = ballCenterY - aiCenterY;
+
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      if (distance > 5) {
+        dx /= distance;
+        dy /= distance;
+      }
+    } else {
+      dx = this.wanderDx;
+      dy = this.wanderDy;
+    }
+
+    if (dx !== 0 || dy !== 0) {
+      const length = Math.sqrt(dx * dx + dy * dy);
+      dx /= length;
+      dy /= length;
+
+      this.vx += dx * acceleration;
+      this.vy += dy * acceleration;
+
+      const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+      if (speed > maxSpeed) {
+        this.vx = (this.vx / speed) * maxSpeed;
+        this.vy = (this.vy / speed) * maxSpeed;
+      }
+
+      this.angle = Math.atan2(dy, dx) * (180 / Math.PI);
+    } else {
+      this.vx *= friction;
+      this.vy *= friction;
+
+      if (Math.abs(this.vx) < 0.1) this.vx = 0;
+      if (Math.abs(this.vy) < 0.1) this.vy = 0;
+    }
+
+    this.x += this.vx;
+    this.y += this.vy;
+
+    this.x = Math.max(0, Math.min(PITCH_WIDTH - PLAYER_WIDTH, this.x));
+    this.y = Math.max(0, Math.min(PITCH_HEIGHT - PLAYER_HEIGHT, this.y));
+
+    this.element.style.left = this.x + "px";
+    this.element.style.top = this.y + "px";
+    this.element.style.transform = `rotate(${this.angle + 90}deg)`;
+  }
+
+  updatePosition() {
+    this.element.style.left = this.x + "px";
+    this.element.style.top = this.y + "px";
+    this.element.style.transform = `rotate(${this.angle + 90}deg)`;
+  }
+
+  checkKick() {
+    const aiCenterX = this.x + PLAYER_WIDTH / 2;
+    const aiCenterY = this.y + PLAYER_HEIGHT / 2;
+    const ballCenterX = ballX + BALL_SIZE / 2;
+    const ballCenterY = ballY + BALL_SIZE / 2;
+
+    const dx = ballCenterX - aiCenterX;
+    const dy = ballCenterY - aiCenterY;
+
+    const angleRad = (this.angle * Math.PI) / 180;
+    const cos = Math.cos(-angleRad);
+    const sin = Math.sin(-angleRad);
+    const rotatedDx = dx * cos - dy * sin;
+    const rotatedDy = dx * sin + dy * cos;
+
+    const ellipseRadiusX = 35;
+    const ellipseRadiusY = 20;
+
+    const normalizedDistance =
+      (rotatedDx * rotatedDx) / (ellipseRadiusX * ellipseRadiusX) +
+      (rotatedDy * rotatedDy) / (ellipseRadiusY * ellipseRadiusY);
+
+    if (normalizedDistance <= 1) {
+      const angle = Math.atan2(dy, dx);
+      const kickVx = Math.cos(angle) * KICK_FORCE;
+      const kickVy = Math.sin(angle) * KICK_FORCE;
+
+      const aiSpeed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+      if (aiSpeed > 0.5) {
+        ballVx = kickVx + this.vx * 0.2;
+        ballVy = kickVy + this.vy * 0.2;
+        ballLastKicker = this.team;
+      } else if (ballVx === 0 && ballVy === 0) {
+        ballVx = kickVx;
+        ballVy = kickVy;
+        ballLastKicker = this.team;
+      }
+    }
+  }
+}
+
 let playerX = 100;
 let playerY = (PITCH_HEIGHT - PLAYER_HEIGHT) / 2;
 let playerVx = 0;
 let playerVy = 0;
 let playerAngle = 0;
-let aiPlayerX = PITCH_WIDTH - 100 - PLAYER_WIDTH;
-let aiPlayerY = (PITCH_HEIGHT - PLAYER_HEIGHT) / 2;
-let aiPlayerVx = 0;
-let aiPlayerVy = 0;
-let aiPlayerAngle = 0;
 let ballX = PITCH_WIDTH / 2 - BALL_SIZE / 2;
 let ballY = PITCH_HEIGHT / 2 - BALL_SIZE / 2;
 let ballVx = 0;
@@ -54,11 +208,10 @@ let keys = {};
 let mouseDown = false;
 let mouseX = 0;
 let mouseY = 0;
-let aiMode = "wander";
-let aiModeTimer = 0;
-let aiWanderDx = 0;
-let aiWanderDy = 0;
 let playerHasMoved = false;
+
+let aiPlayers = [];
+let teammate = null;
 
 function init() {
   dateInput = "";
@@ -70,16 +223,49 @@ function init() {
   playerY = (PITCH_HEIGHT - PLAYER_HEIGHT) / 2;
   playerVx = 0;
   playerVy = 0;
-  aiPlayerX = PITCH_WIDTH - 100 - PLAYER_WIDTH;
-  aiPlayerY = (PITCH_HEIGHT - PLAYER_HEIGHT) / 2;
-  aiPlayerVx = 0;
-  aiPlayerVy = 0;
   ballX = PITCH_WIDTH / 2 - BALL_SIZE / 2;
   ballY = PITCH_HEIGHT / 2 - BALL_SIZE / 2;
   ballVx = 0;
   ballVy = 0;
   ballPatternX = 0;
   ballPatternY = 0;
+
+  aiPlayers = [];
+  teammate = null;
+
+  if (teamMode) {
+    teammate = new AIPlayer(
+      teammatePlayer,
+      150,
+      (PITCH_HEIGHT - PLAYER_HEIGHT) / 2 + 100,
+      "player"
+    );
+    aiPlayers.push(
+      new AIPlayer(
+        aiPlayer,
+        PITCH_WIDTH - 100 - PLAYER_WIDTH,
+        (PITCH_HEIGHT - PLAYER_HEIGHT) / 2,
+        "ai"
+      )
+    );
+    aiPlayers.push(
+      new AIPlayer(
+        aiPlayer2,
+        PITCH_WIDTH - 150 - PLAYER_WIDTH,
+        (PITCH_HEIGHT - PLAYER_HEIGHT) / 2 + 100,
+        "ai"
+      )
+    );
+  } else if (!easyMode) {
+    aiPlayers.push(
+      new AIPlayer(
+        aiPlayer,
+        PITCH_WIDTH - 100 - PLAYER_WIDTH,
+        (PITCH_HEIGHT - PLAYER_HEIGHT) / 2,
+        "ai"
+      )
+    );
+  }
 
   document.querySelectorAll(".number").forEach((el) => el.remove());
   numbers = [];
@@ -89,7 +275,9 @@ function init() {
     numberEl.className = "number";
     numberEl.textContent = i;
 
-    let x, y, attempts = 0;
+    let x,
+      y,
+      attempts = 0;
     let validPosition = false;
 
     while (!validPosition && attempts < 100) {
@@ -132,7 +320,8 @@ function init() {
   }
 
   updatePlayer();
-  updateAIPlayer();
+  aiPlayers.forEach((ai) => ai.updatePosition());
+  if (teammate) teammate.updatePosition();
   updateBall();
   updateNumberVisibility();
 }
@@ -179,12 +368,6 @@ function updatePlayer() {
   player.style.transform = `rotate(${playerAngle + 90}deg)`;
 }
 
-function updateAIPlayer() {
-  aiPlayer.style.left = aiPlayerX + "px";
-  aiPlayer.style.top = aiPlayerY + "px";
-  aiPlayer.style.transform = `rotate(${aiPlayerAngle + 90}deg)`;
-}
-
 function updateBall() {
   ball.style.left = ballX + "px";
   ball.style.top = ballY + "px";
@@ -229,103 +412,53 @@ function getValidNumbers(input) {
 }
 
 function updateNumberVisibility() {
-  if (!easyMode) {
-    numbers.forEach(num => {
-      num.element.style.display = "flex";
-    });
-    return;
-  }
+  const playerValid = getValidNumbers(dateInput);
+  const aiValid = easyMode ? [] : getValidNumbers(aiDateInput);
 
-  const validNumbers = getValidNumbers(dateInput);
+  numbers.forEach((num) => {
+    const validForPlayer = playerValid.includes(num.value);
+    const validForAI = aiValid.includes(num.value);
 
-  numbers.forEach(num => {
-    if (validNumbers.includes(num.value)) {
-      num.element.style.display = "flex";
+    num.element.classList.remove("player-only", "ai-only", "both-valid");
+
+    if (easyMode) {
+      if (validForPlayer) {
+        num.element.style.display = "flex";
+      } else {
+        num.element.style.display = "none";
+      }
     } else {
-      num.element.style.display = "none";
+      if (validForPlayer && validForAI) {
+        num.element.style.display = "flex";
+        num.element.classList.add("both-valid");
+      } else if (validForPlayer) {
+        num.element.style.display = "flex";
+        num.element.classList.add("player-only");
+      } else if (validForAI) {
+        num.element.style.display = "flex";
+        num.element.classList.add("ai-only");
+      } else {
+        num.element.style.display = "none";
+      }
     }
   });
 }
 
 function updateAI() {
-  if (!playerHasMoved || easyMode) {
-    return;
-  }
-
-  const acceleration = 0.25;
-  const maxSpeed = 3.5;
-  const friction = 0.88;
-
-  aiModeTimer++;
-  const timeLimit = aiMode === "wander" ? 120 : 120;
-
-  if (aiModeTimer > timeLimit) {
-    aiModeTimer = 0;
-    if (aiMode === "wander") {
-      aiMode = "chase";
-    } else {
-      aiMode = "wander";
-      aiWanderDx = (Math.random() - 0.5) * 2;
-      aiWanderDy = (Math.random() - 0.5) * 2;
-    }
-  }
-
-  let dx = 0;
-  let dy = 0;
-
-  if (aiMode === "chase") {
-    const ballCenterX = ballX + BALL_SIZE / 2;
-    const ballCenterY = ballY + BALL_SIZE / 2;
-    const aiCenterX = aiPlayerX + PLAYER_WIDTH / 2;
-    const aiCenterY = aiPlayerY + PLAYER_HEIGHT / 2;
-
-    dx = ballCenterX - aiCenterX;
-    dy = ballCenterY - aiCenterY;
-
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    if (distance > 5) {
-      dx /= distance;
-      dy /= distance;
-    }
-  } else {
-    dx = aiWanderDx;
-    dy = aiWanderDy;
-  }
-
-  if (dx !== 0 || dy !== 0) {
-    const length = Math.sqrt(dx * dx + dy * dy);
-    dx /= length;
-    dy /= length;
-
-    aiPlayerVx += dx * acceleration;
-    aiPlayerVy += dy * acceleration;
-
-    const speed = Math.sqrt(aiPlayerVx * aiPlayerVx + aiPlayerVy * aiPlayerVy);
-    if (speed > maxSpeed) {
-      aiPlayerVx = (aiPlayerVx / speed) * maxSpeed;
-      aiPlayerVy = (aiPlayerVy / speed) * maxSpeed;
-    }
-
-    aiPlayerAngle = Math.atan2(dy, dx) * (180 / Math.PI);
-  } else {
-    aiPlayerVx *= friction;
-    aiPlayerVy *= friction;
-
-    if (Math.abs(aiPlayerVx) < 0.1) aiPlayerVx = 0;
-    if (Math.abs(aiPlayerVy) < 0.1) aiPlayerVy = 0;
-  }
-
-  aiPlayerX += aiPlayerVx;
-  aiPlayerY += aiPlayerVy;
-
-  aiPlayerX = Math.max(0, Math.min(PITCH_WIDTH - PLAYER_WIDTH, aiPlayerX));
-  aiPlayerY = Math.max(0, Math.min(PITCH_HEIGHT - PLAYER_HEIGHT, aiPlayerY));
-
-  checkPlayerCollision();
-
-  updateAIPlayer();
-  checkAIKick();
+  aiPlayers.forEach((ai) => {
+    ai.update();
+    ai.checkKick();
+  });
 }
+
+function updateTeammate() {
+  if (teammate) {
+    teammate.update();
+    teammate.checkKick();
+  }
+}
+
+function updateAI2() {}
 
 function checkKick() {
   const playerCenterX = playerX + PLAYER_WIDTH / 2;
@@ -372,69 +505,35 @@ function checkPlayerCollision() {
 
   const p1CenterX = playerX + PLAYER_WIDTH / 2;
   const p1CenterY = playerY + PLAYER_HEIGHT / 2;
-  const p2CenterX = aiPlayerX + PLAYER_WIDTH / 2;
-  const p2CenterY = aiPlayerY + PLAYER_HEIGHT / 2;
-
-  const dx = p2CenterX - p1CenterX;
-  const dy = p2CenterY - p1CenterY;
-  const distance = Math.sqrt(dx * dx + dy * dy);
   const minDistance = (PLAYER_WIDTH + PLAYER_HEIGHT) / 2;
 
-  if (distance < minDistance) {
-    const overlap = minDistance - distance;
-    const angle = Math.atan2(dy, dx);
+  const allAI = [...aiPlayers];
+  if (teammate) allAI.push(teammate);
 
-    const pushX = Math.cos(angle) * overlap / 2;
-    const pushY = Math.sin(angle) * overlap / 2;
+  for (const ai of allAI) {
+    const p2CenterX = ai.x + PLAYER_WIDTH / 2;
+    const p2CenterY = ai.y + PLAYER_HEIGHT / 2;
 
-    playerX -= pushX;
-    playerY -= pushY;
-    aiPlayerX += pushX;
-    aiPlayerY += pushY;
+    const dx = p2CenterX - p1CenterX;
+    const dy = p2CenterY - p1CenterY;
+    const distance = Math.sqrt(dx * dx + dy * dy);
 
-    playerX = Math.max(0, Math.min(PITCH_WIDTH - PLAYER_WIDTH, playerX));
-    playerY = Math.max(0, Math.min(PITCH_HEIGHT - PLAYER_HEIGHT, playerY));
-    aiPlayerX = Math.max(0, Math.min(PITCH_WIDTH - PLAYER_WIDTH, aiPlayerX));
-    aiPlayerY = Math.max(0, Math.min(PITCH_HEIGHT - PLAYER_HEIGHT, aiPlayerY));
-  }
-}
+    if (distance < minDistance) {
+      const overlap = minDistance - distance;
+      const angle = Math.atan2(dy, dx);
 
-function checkAIKick() {
-  const aiCenterX = aiPlayerX + PLAYER_WIDTH / 2;
-  const aiCenterY = aiPlayerY + PLAYER_HEIGHT / 2;
-  const ballCenterX = ballX + BALL_SIZE / 2;
-  const ballCenterY = ballY + BALL_SIZE / 2;
+      const pushX = (Math.cos(angle) * overlap) / 2;
+      const pushY = (Math.sin(angle) * overlap) / 2;
 
-  const dx = ballCenterX - aiCenterX;
-  const dy = ballCenterY - aiCenterY;
+      playerX -= pushX;
+      playerY -= pushY;
+      ai.x += pushX;
+      ai.y += pushY;
 
-  const angleRad = (aiPlayerAngle * Math.PI) / 180;
-  const cos = Math.cos(-angleRad);
-  const sin = Math.sin(-angleRad);
-  const rotatedDx = dx * cos - dy * sin;
-  const rotatedDy = dx * sin + dy * cos;
-
-  const ellipseRadiusX = 35;
-  const ellipseRadiusY = 20;
-
-  const normalizedDistance =
-    (rotatedDx * rotatedDx) / (ellipseRadiusX * ellipseRadiusX) +
-    (rotatedDy * rotatedDy) / (ellipseRadiusY * ellipseRadiusY);
-
-  if (normalizedDistance <= 1) {
-    const angle = Math.atan2(dy, dx);
-    const kickVx = Math.cos(angle) * KICK_FORCE;
-    const kickVy = Math.sin(angle) * KICK_FORCE;
-
-    const aiSpeed = Math.sqrt(aiPlayerVx * aiPlayerVx + aiPlayerVy * aiPlayerVy);
-    if (aiSpeed > 0.5) {
-      ballVx = kickVx + aiPlayerVx * 0.2;
-      ballVy = kickVy + aiPlayerVy * 0.2;
-      ballLastKicker = "ai";
-    } else if (ballVx === 0 && ballVy === 0) {
-      ballVx = kickVx;
-      ballVy = kickVy;
-      ballLastKicker = "ai";
+      playerX = Math.max(0, Math.min(PITCH_WIDTH - PLAYER_WIDTH, playerX));
+      playerY = Math.max(0, Math.min(PITCH_HEIGHT - PLAYER_HEIGHT, playerY));
+      ai.x = Math.max(0, Math.min(PITCH_WIDTH - PLAYER_WIDTH, ai.x));
+      ai.y = Math.max(0, Math.min(PITCH_HEIGHT - PLAYER_HEIGHT, ai.y));
     }
   }
 }
@@ -481,12 +580,21 @@ function checkBallPlayerCollision() {
   const ballCenterX = ballX + BALL_SIZE / 2;
   const ballCenterY = ballY + BALL_SIZE / 2;
 
-  const players = easyMode
-    ? [{ x: playerX, y: playerY, vx: playerVx, vy: playerVy }]
-    : [
-        { x: playerX, y: playerY, vx: playerVx, vy: playerVy },
-        { x: aiPlayerX, y: aiPlayerY, vx: aiPlayerVx, vy: aiPlayerVy }
-      ];
+  const players = [{ x: playerX, y: playerY, vx: playerVx, vy: playerVy }];
+
+  if (!easyMode) {
+    aiPlayers.forEach((ai) => {
+      players.push({ x: ai.x, y: ai.y, vx: ai.vx, vy: ai.vy });
+    });
+    if (teammate) {
+      players.push({
+        x: teammate.x,
+        y: teammate.y,
+        vx: teammate.vx,
+        vy: teammate.vy,
+      });
+    }
+  }
 
   for (let p of players) {
     const pCenterX = p.x + PLAYER_WIDTH / 2;
@@ -534,12 +642,20 @@ function checkNumberCollision() {
 
     if (distance < (BALL_SIZE + NUMBER_SIZE) / 2) {
       if (ballLastKicker === "player") {
+        const validForPlayer = getValidNumbers(dateInput).includes(num.value);
+        if (!validForPlayer && !easyMode) {
+          break;
+        }
         dateInput += num.value;
         updateDateDisplay();
         if (dateInput.length === 8) {
           validateDate("player");
         }
       } else {
+        const validForAI = getValidNumbers(aiDateInput).includes(num.value);
+        if (!validForAI) {
+          break;
+        }
         aiDateInput += num.value;
         updateAIDateDisplay();
         if (aiDateInput.length === 8) {
@@ -547,7 +663,9 @@ function checkNumberCollision() {
         }
       }
 
-      let newX, newY, attempts = 0;
+      let newX,
+        newY,
+        attempts = 0;
       let validPosition = false;
 
       while (!validPosition && attempts < 100) {
@@ -605,14 +723,26 @@ function validateDate(winner) {
     date.getMonth() === month - 1 &&
     date.getDate() === day;
 
-  const formattedDate = `${input.substring(0, 2)}-${input.substring(2, 4)}-${input.substring(4, 8)}`;
+  const formattedDate = `${input.substring(0, 2)}-${input.substring(
+    2,
+    4
+  )}-${input.substring(4, 8)}`;
   const playerName = nameInput.value.trim() || "You";
   const winnerName = winner === "player" ? playerName : "AI";
 
-  if (isValid) {
-    overlayMessage.textContent = `${winnerName} win! Valid date: ${formattedDate}`;
+  if (isValid && winner === "player") {
+    overlayTitle.textContent = `You win!`;
+    overlayMessage.textContent = `Your date: ${formattedDate}`;
+    selectDateButton.classList.remove("hidden");
+    selectedDate = formattedDate;
+  } else if (isValid && winner === "ai") {
+    overlayTitle.textContent = "You Lost!";
+    overlayMessage.textContent = "Better luck next time!";
+    selectDateButton.classList.add("hidden");
   } else {
-    overlayMessage.textContent = `${winnerName} completed first but invalid date: ${formattedDate}`;
+    overlayTitle.textContent = "Invalid Date!";
+    overlayMessage.textContent = `${winnerName} completed first but the date ${formattedDate} is invalid.`;
+    selectDateButton.classList.add("hidden");
   }
 
   gameActive = false;
@@ -686,7 +816,7 @@ function gameLoop() {
   }
 
   const currentSpeed = Math.sqrt(playerVx * playerVx + playerVy * playerVy);
-  if (currentSpeed > 0.5 && (dx === 0 && dy === 0)) {
+  if (currentSpeed > 0.5 && dx === 0 && dy === 0) {
     const targetAngle = Math.atan2(playerVy, playerVx) * (180 / Math.PI);
     let angleDiff = targetAngle - (playerAngle % 360);
 
@@ -707,6 +837,8 @@ function gameLoop() {
   updatePlayer();
   checkKick();
   updateAI();
+  updateTeammate();
+  updateAI2();
   updateBallPhysics();
   requestAnimationFrame(gameLoop);
 }
@@ -724,15 +856,23 @@ document.addEventListener("keyup", (e) => {
   }
 });
 
-overlayButton.addEventListener("click", () => {
+changeDateButton.addEventListener("click", () => {
+  overlay.classList.add("hidden");
+  selectDateButton.classList.add("hidden");
+  selectedDate = "";
+  init();
+  gameLoop();
+});
+
+selectDateButton.addEventListener("click", () => {
   overlay.classList.add("hidden");
   gameContainer.classList.add("hidden");
   formContainer.classList.remove("expanding");
   formContainer.style.display = "block";
   gameActive = false;
   document.body.style.background = "#f5f5f5";
-  birthDateInput.value = "";
-  init();
+  birthDateInput.value = selectedDate;
+  submitBtn.disabled = false;
 });
 
 birthDateInput.addEventListener("focus", () => {
@@ -740,23 +880,37 @@ birthDateInput.addEventListener("focus", () => {
 
   gameActive = true;
   easyMode = difficultySelect.value === "easy";
+  teamMode = difficultySelect.value === "team";
   const playerName = nameInput.value.trim() || "You";
   playerNameDisplay.textContent = playerName;
 
   const aiScoreboard = document.querySelector(".ai-score");
   const aiPlayerElement = document.getElementById("aiPlayer");
+  const aiPlayer2Element = document.getElementById("aiPlayer2");
+  const teammatePlayerElement = document.getElementById("teammatePlayer");
+
   if (easyMode) {
     aiScoreboard.style.display = "none";
     aiPlayerElement.style.display = "none";
+    aiPlayer2Element.style.display = "none";
+    teammatePlayerElement.style.display = "none";
+  } else if (teamMode) {
+    aiScoreboard.style.display = "block";
+    aiPlayerElement.style.display = "block";
+    aiPlayer2Element.style.display = "block";
+    teammatePlayerElement.style.display = "block";
   } else {
     aiScoreboard.style.display = "block";
     aiPlayerElement.style.display = "block";
+    aiPlayer2Element.style.display = "none";
+    teammatePlayerElement.style.display = "none";
   }
 
   formContainer.classList.add("expanding");
   gameContainer.classList.remove("hidden");
   gameContainer.classList.add("appearing");
-  document.body.style.background = "linear-gradient(135deg, #667eea 0%, #764ba2 100%)";
+  document.body.style.background =
+    "linear-gradient(135deg, #667eea 0%, #764ba2 100%)";
 
   setTimeout(() => {
     formContainer.style.display = "none";
