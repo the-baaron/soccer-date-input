@@ -338,7 +338,7 @@ function updateDateDisplay() {
     if (i === 2 || i === 4) {
       formatted += "-";
     }
-    formatted += dateInput[i] || "_";
+    formatted += dateInput[i] || ".";
   }
   dateValueDisplay.textContent = formatted;
   birthDateInput.value = formatted;
@@ -909,8 +909,7 @@ birthDateInput.addEventListener("focus", () => {
   formContainer.classList.add("expanding");
   gameContainer.classList.remove("hidden");
   gameContainer.classList.add("appearing");
-  document.body.style.background =
-    "linear-gradient(135deg, #667eea 0%, #764ba2 100%)";
+  document.body.style.background = "#8B85C1";
 
   setTimeout(() => {
     formContainer.style.display = "none";

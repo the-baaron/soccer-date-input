@@ -210,17 +210,19 @@ body {
 }
 
 .ai-score .score-name {
-  color: #ef4444;
+  color: #f42c04;
 }
 
 .score-value {
+  white-space: pre;
+  font-family: monospace;
   letter-spacing: 1px;
 }
 
 .pitch {
   width: 800px;
   height: 500px;
-  background: #4ade80;
+  background: #98ce00;
   border: 4px solid white;
   border-radius: 0 0 8px 8px;
   position: relative;
@@ -278,7 +280,7 @@ body {
 }
 
 .ai-player::before {
-  background: #ef4444;
+  background: #f42c04;
   border-color: #dc2626;
 }
 
@@ -362,12 +364,12 @@ body {
 }
 
 .number.ai-only {
-  background: #ef4444;
+  background: #f42c04;
   color: white;
 }
 
 .number.both-valid {
-  background: linear-gradient(90deg, #60a5fa 50%, #ef4444 50%);
+  background: linear-gradient(90deg, #60a5fa 50%, #f42c04 50%);
   color: white;
 }
 
