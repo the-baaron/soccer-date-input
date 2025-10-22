@@ -1,50 +1,74 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Soccer Date Input</title>
-    <link rel="stylesheet" href="styles.css">
-</head>
-<body>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
     <div class="form-container" id="formContainer">
-        <h1>Registration Form</h1>
-        <form>
-            <div class="form-group">
-                <label for="nameInput">Full Name</label>
-                <input type="text" id="nameInput" placeholder="Enter your full name">
-            </div>
-            <div class="form-group">
-                <label for="birthDateInput">Date of Birth (DD-MM-YYYY)</label>
-                <input type="text" id="birthDateInput" placeholder="DD-MM-YYYY" maxlength="10" readonly disabled>
-            </div>
-            <button type="submit" class="submit-btn" id="submitBtn" disabled>Submit</button>
-        </form>
+      <h1>Registration Form</h1>
+      <form>
+        <div class="form-group">
+          <label for="nameInput">Full Name</label>
+          <input
+            type="text"
+            id="nameInput"
+            placeholder="Enter your full name"
+          />
+        </div>
+        <div class="form-group">
+          <label for="difficultySelect"
+            >How would you like to choose a date?</label
+          >
+          <select id="difficultySelect">
+            <option value="easy">Solo</option>
+            <option value="normal">1 vs 1</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="birthDateInput">Date of Birth (DD-MM-YYYY)</label>
+          <input
+            type="text"
+            id="birthDateInput"
+            placeholder="DD-MM-YYYY"
+            maxlength="10"
+            readonly
+            disabled
+          />
+        </div>
+        <button type="submit" class="submit-btn" id="submitBtn" disabled>
+          Submit
+        </button>
+      </form>
     </div>
     <div class="game-container hidden" id="gameContainer">
-        <div class="game-on-title hidden" id="gameOnTitle">GAME ON</div>
-        <div class="scoreboards">
-            <div class="scoreboard player-score">
-                <span class="score-name" id="playerNameDisplay">You</span>: <span class="score-value" id="dateValue">dd-mm-yyyy</span>
-            </div>
-            <div class="scoreboard ai-score">
-                <span class="score-name">AI</span>: <span class="score-value" id="aiDateValue">dd-mm-yyyy</span>
-            </div>
+      <div class="game-on-title hidden" id="gameOnTitle">GAME ON</div>
+      <div class="scoreboards">
+        <div class="scoreboard player-score">
+          <span class="score-name" id="playerNameDisplay">You</span>:
+          <span class="score-value" id="dateValue">dd-mm-yyyy</span>
         </div>
-        <div class="pitch" id="pitch">
-            <div class="player" id="player"></div>
-            <div class="player ai-player" id="aiPlayer"></div>
-            <div class="ball" id="ball">
-                <div class="ball-gradient"></div>
-            </div>
+        <div class="scoreboard ai-score">
+          <span class="score-name">AI</span>:
+          <span class="score-value" id="aiDateValue">dd-mm-yyyy</span>
         </div>
+      </div>
+      <div class="pitch" id="pitch">
+        <div class="player" id="player"></div>
+        <div class="player ai-player" id="aiPlayer"></div>
+        <div class="ball" id="ball">
+          <div class="ball-gradient"></div>
+        </div>
+      </div>
     </div>
     <div class="overlay hidden" id="overlay">
-        <div class="overlay-content">
-            <div id="overlayMessage"></div>
-            <button id="overlayButton">Play Again</button>
-        </div>
+      <div class="overlay-content">
+        <div id="overlayMessage"></div>
+        <button id="overlayButton">Play Again</button>
+      </div>
     </div>
     <script src="script.js"></script>
-</body>
+  </body>
 </html>

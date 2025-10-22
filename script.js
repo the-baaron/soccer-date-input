@@ -2,6 +2,7 @@ const formContainer = document.getElementById("formContainer");
 const gameContainer = document.getElementById("gameContainer");
 const nameInput = document.getElementById("nameInput");
 const birthDateInput = document.getElementById("birthDateInput");
+const difficultySelect = document.getElementById("difficultySelect");
 const submitBtn = document.getElementById("submitBtn");
 const gameOnTitle = document.getElementById("gameOnTitle");
 const pitch = document.getElementById("pitch");
@@ -16,6 +17,7 @@ const overlayMessage = document.getElementById("overlayMessage");
 const overlayButton = document.getElementById("overlayButton");
 
 let gameActive = false;
+let easyMode = false;
 
 const PITCH_WIDTH = 800;
 const PITCH_HEIGHT = 500;
@@ -132,6 +134,7 @@ function init() {
   updatePlayer();
   updateAIPlayer();
   updateBall();
+  updateNumberVisibility();
 }
 
 function updateDateDisplay() {
@@ -150,6 +153,7 @@ function updateDateDisplay() {
   }
   dateValueDisplay.textContent = formatted;
   birthDateInput.value = formatted;
+  updateNumberVisibility();
 }
 
 function updateAIDateDisplay() {
@@ -166,6 +170,7 @@ function updateAIDateDisplay() {
     formatted += aiDateInput[i] || "_";
   }
   aiDateValueDisplay.textContent = formatted;
+  updateNumberVisibility();
 }
 
 function updatePlayer() {
@@ -186,8 +191,64 @@ function updateBall() {
   ball.style.backgroundPosition = `${ballPatternX}px ${ballPatternY}px`;
 }
 
+function getValidNumbers(input) {
+  const position = input.length;
+  const validNumbers = [];
+
+  if (position === 0) {
+    validNumbers.push(0, 1, 2, 3);
+  } else if (position === 1) {
+    const firstDigit = parseInt(input[0]);
+    if (firstDigit === 0) {
+      validNumbers.push(1, 2, 3, 4, 5, 6, 7, 8, 9);
+    } else if (firstDigit === 1 || firstDigit === 2) {
+      validNumbers.push(0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
+    } else if (firstDigit === 3) {
+      validNumbers.push(0, 1);
+    }
+  } else if (position === 2) {
+    validNumbers.push(0, 1);
+  } else if (position === 3) {
+    const thirdDigit = parseInt(input[2]);
+    if (thirdDigit === 0) {
+      validNumbers.push(1, 2, 3, 4, 5, 6, 7, 8, 9);
+    } else if (thirdDigit === 1) {
+      validNumbers.push(0, 1, 2);
+    }
+  } else if (position === 4) {
+    validNumbers.push(1, 2);
+  } else if (position === 5) {
+    validNumbers.push(0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
+  } else if (position === 6) {
+    validNumbers.push(0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
+  } else if (position === 7) {
+    validNumbers.push(0, 1, 2, 3, 4, 5, 6, 7, 8, 9);
+  }
+
+  return validNumbers;
+}
+
+function updateNumberVisibility() {
+  if (!easyMode) {
+    numbers.forEach(num => {
+      num.element.style.display = "flex";
+    });
+    return;
+  }
+
+  const validNumbers = getValidNumbers(dateInput);
+
+  numbers.forEach(num => {
+    if (validNumbers.includes(num.value)) {
+      num.element.style.display = "flex";
+    } else {
+      num.element.style.display = "none";
+    }
+  });
+}
+
 function updateAI() {
-  if (!playerHasMoved) {
+  if (!playerHasMoved || easyMode) {
     return;
   }
 
@@ -307,6 +368,8 @@ function checkKick() {
 }
 
 function checkPlayerCollision() {
+  if (easyMode) return;
+
   const p1CenterX = playerX + PLAYER_WIDTH / 2;
   const p1CenterY = playerY + PLAYER_HEIGHT / 2;
   const p2CenterX = aiPlayerX + PLAYER_WIDTH / 2;
@@ -418,10 +481,12 @@ function checkBallPlayerCollision() {
   const ballCenterX = ballX + BALL_SIZE / 2;
   const ballCenterY = ballY + BALL_SIZE / 2;
 
-  const players = [
-    { x: playerX, y: playerY, vx: playerVx, vy: playerVy },
-    { x: aiPlayerX, y: aiPlayerY, vx: aiPlayerVx, vy: aiPlayerVy }
-  ];
+  const players = easyMode
+    ? [{ x: playerX, y: playerY, vx: playerVx, vy: playerVy }]
+    : [
+        { x: playerX, y: playerY, vx: playerVx, vy: playerVy },
+        { x: aiPlayerX, y: aiPlayerY, vx: aiPlayerVx, vy: aiPlayerVy }
+      ];
 
   for (let p of players) {
     const pCenterX = p.x + PLAYER_WIDTH / 2;
@@ -454,6 +519,11 @@ function checkNumberCollision() {
 
   for (let i = numbers.length - 1; i >= 0; i--) {
     const num = numbers[i];
+
+    if (num.element.style.display === "none") {
+      continue;
+    }
+
     const numCenterX = num.x + NUMBER_SIZE / 2;
     const numCenterY = num.y + NUMBER_SIZE / 2;
 
@@ -669,8 +739,19 @@ birthDateInput.addEventListener("focus", () => {
   if (gameActive) return;
 
   gameActive = true;
+  easyMode = difficultySelect.value === "easy";
   const playerName = nameInput.value.trim() || "You";
   playerNameDisplay.textContent = playerName;
+
+  const aiScoreboard = document.querySelector(".ai-score");
+  const aiPlayerElement = document.getElementById("aiPlayer");
+  if (easyMode) {
+    aiScoreboard.style.display = "none";
+    aiPlayerElement.style.display = "none";
+  } else {
+    aiScoreboard.style.display = "block";
+    aiPlayerElement.style.display = "block";
+  }
 
   formContainer.classList.add("expanding");
   gameContainer.classList.remove("hidden");
